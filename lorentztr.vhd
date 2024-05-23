@@ -75,20 +75,23 @@ architecture Behavioral of lorentztr is
         
         signal gammaminusbeta : signed(msb downto lsb) := (others=>'1'); --support signal, represnt constant - gamma
         
-        signal scaleoverbeta1_1x, gammabetaxenergy1_1x, betweenx_1x : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (x component, first particle)
-        signal scaleoverbeta1_1y, gammabetayenergy1_1y, betweeny_1y : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (y component, first particle)
-        signal scaleoverbeta1_1z, gammabetazenergy1_1z, betweenz_1z : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (z component, first particle)
+        signal scaleoverbeta1 : signed(msb downto lsb) := x"0000011111";
         
-        signal scaleoverbeta1_1xtemp, scaleoverbeta1_1ytemp, scaleoverbeta1_1ztemp : signed(2*msb+1 downto lsb) := x"00000000000000011111"; --support scaling signals
+        
+        signal gammabetaxenergy1_1x, betweenx_1x : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (x component, first particle)
+        signal gammabetayenergy1_1y, betweeny_1y : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (y component, first particle)
+        signal gammabetazenergy1_1z, betweenz_1z : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (z component, first particle)
+        
+        signal scaleoverbeta1temp, scale1consta : signed(2*msb+1 downto lsb) := x"00000000000000011111"; --support scaling signals
         signal gammabetaxenergy1_1xtemp, gammabetayenergy1_1ytemp, gammabetazenergy1_1ztemp : signed(3*msb+2 downto lsb) := x"000000000000000000000000011111"; --support scaling signals    
         signal betweenx_1xtemp, betweeny_1ytemp, betweenz_1ztemp : signed(3*msb+2 downto lsb) := x"000000000000000000000000011111"; --support scaling signals 
         
+        signal scaleoverbeta2 : signed(msb downto lsb) := x"0000011111";
+        signal gammabetaxenergy2_2x, betweenx_2x : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (x component, second particle)
+        signal gammabetayenergy2_2y, betweeny_2y : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (y component, second particle)
+        signal gammabetazenergy2_2z, betweenz_2z : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (z component, second particle)
         
-        signal scaleoverbeta2_2x, gammabetaxenergy2_2x, betweenx_2x : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (x component, second particle)
-        signal scaleoverbeta2_2y, gammabetayenergy2_2y, betweeny_2y : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (y component, second particle)
-        signal scaleoverbeta2_2z, gammabetazenergy2_2z, betweenz_2z : signed(msb downto lsb) := x"0000011111"; --support scaling signals for the final equation (z component, second particle)
-        
-        signal scaleoverbeta2_2xtemp, scaleoverbeta2_2ytemp, scaleoverbeta2_2ztemp : signed(2*msb+1 downto lsb) := x"00000000000000011111"; --support scaling signals  
+        signal scaleoverbeta2temp, scale2consta : signed(2*msb+1 downto lsb) := x"00000000000000011111"; --support scaling signals  
         signal gammabetaxenergy2_2xtemp, gammabetayenergy2_2ytemp, gammabetazenergy2_2ztemp : signed(3*msb+2 downto lsb) := x"000000000000000000000000011111"; --support scaling signals          
         signal betweenx_2xtemp, betweeny_2ytemp, betweenz_2ztemp : signed(3*msb+2 downto lsb) := x"000000000000000000000000011111"; --support scaling signals 
         
@@ -117,6 +120,13 @@ architecture Behavioral of lorentztr is
         signal energy1_to_cast, energy2_to_cast, gamma_to_cast : signed(msb downto lsb) :=  x"0000011111";
         signal energy1_to_casttmp, energy2_to_casttmp : signed(2*msb+1 downto lsb) :=  x"00000000000000011111";
         signal energy1_casted, energy2_casted, gamma_casted : signed(msb downto lsb) :=  x"0000011111";
+        
+        --some signals to optimze the code
+        signal fPtot_fPxconsta, fPtot_fPyconsta, fPtot_fPzconsta : signed(2*msb+1 downto lsb) :=  x"00000000000011111111";
+        signal betaxxbetax, betayxbetay, betazxbetaz, sumbeta : signed(2*msb+1 downto lsb) :=  x"00000000000011111111";
+        signal betaxfP1_fPx, betayfP1_fPy, betazfP1_fPz, sumbetafP1 : signed(2*msb+1 downto lsb) :=  x"00000000000011111111"; 
+        signal betaxfP2_fPx, betayfP2_fPy, betazfP2_fPz, sumbetafP2 : signed(2*msb+1 downto lsb) :=  x"00000000000011111111"; 
+        
         
         
         
@@ -228,16 +238,23 @@ begin      --b <= "0000" & a;
             
             energytot <= energy1 + energy2;
             
-            betaxtemp <= (fPtot_fPx * consta)/energytot;
-            betaytemp <= (fPtot_fPy * consta)/energytot;
-            betaztemp <= (fPtot_fPz * consta)/energytot;
+            fPtot_fPxconsta <= fPtot_fPx * consta; --to optimize
+            betaxtemp <= fPtot_fPxconsta/energytot; 
+            fPtot_fPyconsta <= fPtot_fPy * consta; --to optimize
+            betaytemp <= fPtot_fPyconsta/energytot;
+            fPtot_fPzconsta <= fPtot_fPz * consta; --to optimize
+            betaztemp <= fPtot_fPzconsta/energytot;
             
             betax <= betaxtemp(39 downto 0);
             betay <= betaytemp(39 downto 0);
             betaz <= betaztemp(39 downto 0);
             
             
-            beta2temp <= (betax*betax + betay*betay + betaz*betaz)/consta;
+            betaxxbetax <= betax*betax;
+            betayxbetay <= betay*betay;
+            betazxbetaz <= betaz*betaz;
+            sumbeta <= betaxxbetax + betayxbetay +betazxbetaz;
+            beta2temp <= sumbeta/consta;
             beta2 <= beta2temp(msb downto lsb);
             gamma_to_cast <= consta - beta2;
             
@@ -263,65 +280,91 @@ begin      --b <= "0000" & a;
             gamma <= gammatemp(msb downto lsb);
             
             --scale1 and scale 2 definition
-            scale1temp <= (betax*fP1_fPx + betay*fP1_fPy + betaz*fP1_fPz)/consta;
-            scale2temp <= (betax*fP2_fPx + betay*fP2_fPy + betaz*fP2_fPz)/consta;
+            betaxfP1_fPx <= betax*fP1_fPx;
+            betayfP1_fPy <= betay*fP1_fPy;
+            betazfP1_fPz <= betaz*fP1_fPz;
+            sumbetafP1 <= betaxfP1_fPx + betayfP1_fPy + betazfP1_fPz;
+            scale1temp <= sumbetafP1/consta;
+            betaxfP2_fPx <= betax*fP2_fPx;                           
+            betayfP2_fPy <= betay*fP2_fPy;                           
+            betazfP2_fPz <= betaz*fP2_fPz;                           
+            sumbetafP2 <= betaxfP2_fPx + betayfP2_fPy + betazfP2_fPz;
+            scale2temp <= sumbetafP2/consta;
 
             scale1 <=  scale1temp(msb downto lsb);
             scale2 <=  scale2temp(msb downto lsb);
 
             gammaminusbeta <= gamma - consta;
-
+            
+            scale1consta <= scale1*consta;
+            scaleoverbeta1temp <= scale1consta/beta2;
+            scaleoverbeta1 <= scaleoverbeta1temp(msb downto lsb);
+            
+            scale2consta <= scale2*consta;
+            scaleoverbeta2temp <= scale2consta/beta2;
+            scaleoverbeta2 <= scaleoverbeta2temp(msb downto lsb);
+            
             --Lorentz transformation of fP1_fPx
-            scaleoverbeta1_1xtemp <= scale1*consta/beta2;
-            scaleoverbeta1_1x <= scaleoverbeta1_1xtemp(msb downto lsb);
+            
+--            scaleoverbeta1_1xtemp <= scale1*consta/beta2;
+--            scaleoverbeta1_1x <= scaleoverbeta1_1xtemp(msb downto lsb);
+
             gammabetaxenergy1_1xtemp <= (gamma*betax*energy1)/(consta*consta);
             gammabetaxenergy1_1x <= gammabetaxenergy1_1xtemp(msb downto lsb);
-            betweenx_1xtemp <= (gammaminusbeta*betax*scaleoverbeta1_1x)/(consta*consta);
+            betweenx_1xtemp <= (gammaminusbeta*betax*scaleoverbeta1)/(consta*consta);
             betweenx_1x <= betweenx_1xtemp(msb downto lsb);
             fP1_fPx_out <= fP1_fPx + betweenx_1x - gammabetaxenergy1_1x;
 
             --Lorentz transformation of fP1_fPy
-            scaleoverbeta1_1ytemp <= scale1*consta/beta2;
-            scaleoverbeta1_1y <= scaleoverbeta1_1ytemp(msb downto lsb);
+            
+--            scaleoverbeta1_1ytemp <= scale1*consta/beta2;
+--            scaleoverbeta1_1y <= scaleoverbeta1_1ytemp(msb downto lsb);
+
             gammabetayenergy1_1ytemp <= (gamma*betay*energy1)/(consta*consta);
             gammabetayenergy1_1y <= gammabetayenergy1_1ytemp(msb downto lsb);
-            betweeny_1ytemp <= (gammaminusbeta*betay*scaleoverbeta1_1y)/(consta*consta);
+            betweeny_1ytemp <= (gammaminusbeta*betay*scaleoverbeta1)/(consta*consta);
             betweeny_1y <= betweeny_1ytemp(msb downto lsb);
             fP1_fPy_out <= fP1_fPy + betweeny_1y - gammabetayenergy1_1y;
 
             --Lorentz transformation of fP1_fPz
-            scaleoverbeta1_1ztemp <= scale1*consta/beta2;
-            scaleoverbeta1_1z <= scaleoverbeta1_1ztemp(msb downto lsb);
+            
+--            scaleoverbeta1_1ztemp <= scale1*consta/beta2;
+--            scaleoverbeta1_1z <= scaleoverbeta1_1ztemp(msb downto lsb);
+
             gammabetazenergy1_1ztemp <= (gamma*betaz*energy1)/(consta*consta);
             gammabetazenergy1_1z <= gammabetazenergy1_1ztemp(msb downto lsb);
-            betweenz_1ztemp <= (gammaminusbeta*betaz*scaleoverbeta1_1z)/(consta*consta);
+            betweenz_1ztemp <= (gammaminusbeta*betaz*scaleoverbeta1)/(consta*consta);
             betweenz_1z <= betweenz_1ztemp(msb downto lsb);
             fP1_fPz_out <= fP1_fPz + betweenz_1z - gammabetazenergy1_1z;
 
             --Lorentz transformation of fP2_fPx
-            scaleoverbeta2_2xtemp <= scale2*consta/beta2;
-            scaleoverbeta2_2x <= scaleoverbeta2_2xtemp(msb downto lsb);
+            
+--            scaleoverbeta2_2xtemp <= scale2*consta/beta2;
+--            scaleoverbeta2_2x <= scaleoverbeta2_2xtemp(msb downto lsb);
+
             gammabetaxenergy2_2xtemp <= (gamma*betax*energy2)/(consta*consta);
             gammabetaxenergy2_2x <= gammabetaxenergy2_2xtemp(msb downto lsb);
-            betweenx_2xtemp <= (gammaminusbeta*betax*scaleoverbeta2_2x)/(consta*consta);
+            betweenx_2xtemp <= (gammaminusbeta*betax*scaleoverbeta2)/(consta*consta);
             betweenx_2x <= betweenx_2xtemp(msb downto lsb);
             fP2_fPx_out <= fP2_fPx + betweenx_2x - gammabetaxenergy2_2x;
 
             --Lorentz transformation of fP2_fPy
-            scaleoverbeta2_2ytemp <= scale2*consta/beta2;
-            scaleoverbeta2_2y <= scaleoverbeta2_2ytemp(msb downto lsb);
+            
+--            scaleoverbeta2_2ytemp <= scale2*consta/beta2;
+--            scaleoverbeta2_2y <= scaleoverbeta2_2ytemp(msb downto lsb);
+
             gammabetayenergy2_2ytemp <= (gamma*betay*energy2)/(consta*consta);
             gammabetayenergy2_2y <= gammabetayenergy2_2ytemp(msb downto lsb);
-            betweeny_2ytemp <= (gammaminusbeta*betay*scaleoverbeta2_2y)/(consta*consta);
+            betweeny_2ytemp <= (gammaminusbeta*betay*scaleoverbeta2)/(consta*consta);
             betweeny_2y <= betweeny_2ytemp(msb downto lsb);
             fP2_fPy_out <= fP2_fPy + betweeny_2y - gammabetayenergy2_2y;
 
             --Lorentz transformation of fP2_fPz
-            scaleoverbeta2_2ztemp <= scale2*consta/beta2;
-            scaleoverbeta2_2z <= scaleoverbeta2_2ztemp(msb downto lsb);
+--            scaleoverbeta2_2ztemp <= scale2*consta/beta2;
+--            scaleoverbeta2_2z <= scaleoverbeta2_2ztemp(msb downto lsb);
             gammabetazenergy2_2ztemp <= (gamma*betaz*energy2)/(consta*consta);
             gammabetazenergy2_2z <= gammabetazenergy2_2ztemp(msb downto lsb);
-            betweenz_2ztemp <= (gammaminusbeta*betaz*scaleoverbeta2_2z)/(consta*consta);
+            betweenz_2ztemp <= (gammaminusbeta*betaz*scaleoverbeta2)/(consta*consta);
             betweenz_2z <= betweenz_2ztemp(msb downto lsb);
             fP2_fPz_out <= fP2_fPz + betweenz_2z - gammabetazenergy2_2z;
             
